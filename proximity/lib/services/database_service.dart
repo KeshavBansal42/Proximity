@@ -4,15 +4,19 @@ import '../models/reminder_model.dart';
 class DatabaseService {
   static const String _boxname = "reminders";
 
-  static Future<void> init() async{
+  static Future<void> init() async {
     await Hive.initFlutter();
 
-    Hive.registerAdapter(ReminderAdapter());
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(ReminderAdapter());
+    }
 
-    await Hive.openBox<Reminder>(_boxname);
+    if (!Hive.isBoxOpen('reminders')) {
+      await Hive.openBox<Reminder>('reminders');
+    }
   }
 
-  static Box<Reminder> getBox(){
+  static Box<Reminder> getBox() {
     return Hive.box<Reminder>(_boxname);
   }
 

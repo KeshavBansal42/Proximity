@@ -59,9 +59,9 @@ class _HomeState extends State<Home> {
                         child: ListTile(
                           leading: Checkbox(
                             checkColor: Colors.white,
-                            fillColor: reminder.isActive ? MaterialStateProperty.all(
-                              Colors.blue[800],
-                            ): null,
+                            fillColor: reminder.isActive
+                                ? MaterialStateProperty.all(Colors.blue[800])
+                                : null,
                             value: reminder.isActive,
                             onChanged: (bool? value) {
                               final updatedReminder = Reminder(
@@ -76,18 +76,21 @@ class _HomeState extends State<Home> {
                               box.putAt(index, updatedReminder);
                             },
                           ),
-                          title: Text(reminder.title,
-                          style: TextStyle(
-                            decoration: !reminder.isActive ? TextDecoration.lineThrough : null,
-                            fontFamily: "Courier",
-                            fontWeight: FontWeight.bold,
-                          ),
+                          title: Text(
+                            reminder.title,
+                            style: TextStyle(
+                              decoration: !reminder.isActive
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              fontFamily: "Courier",
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           subtitle: Text(
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 28,
-                              fontFamily: "Courier"
+                              fontFamily: "Courier",
                             ),
                             "${reminder.hour.toString().padLeft(2, '0')} : ${reminder.minute.toString().padLeft(2, '0')}",
                           ),

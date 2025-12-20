@@ -24,7 +24,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation(); // Run this as soon as screen loads
+    _getCurrentLocation();
   }
 
   Future<void> _pickTime() async {
@@ -206,7 +206,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                   child: FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                      initialCenter: LatLng(28.6139, 77.2090),
+                      initialCenter: LatLng(29.866, 77.899),
                       initialZoom: 13,
                       onTap: (tapPosition, point) {
                         setState(() {
