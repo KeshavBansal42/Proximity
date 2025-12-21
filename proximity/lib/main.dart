@@ -18,6 +18,10 @@ void main() async {
     await Permission.notification.request();
   }
 
+  if (await Permission.ignoreBatteryOptimizations.isDenied) {
+     await Permission.ignoreBatteryOptimizations.request();
+  }
+
   await AndroidAlarmManager.initialize();
   await AndroidAlarmManager.periodic(
     const Duration(minutes: 1),

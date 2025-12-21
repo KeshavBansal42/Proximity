@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:weekday_selector/weekday_selector.dart';
 import '../models/reminder_model.dart';
 import '../services/database_service.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,7 +14,9 @@ class AddReminderScreen extends StatefulWidget {
 }
 
 class _AddReminderScreenState extends State<AddReminderScreen> {
+  final values = List.filled(7, false);
   TimeOfDay _selectedTime = TimeOfDay.now();
+  final now = DateTime.now();
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _radiusController = TextEditingController(
     text: "150",
@@ -25,6 +28,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    final todayIndex = now.weekday % 7;
+    values[todayIndex] = true;
   }
 
   Future<void> _pickTime() async {
@@ -190,6 +195,27 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
+                  "Select days of the week:",
+                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
+                ),
+              ),
+
+              WeekdaySelector(
+                color: Colors.blue,
+                splashColor: Colors.blue,
+                selectedFillColor: Colors.blue,
+                onChanged: (int day) {
+                  setState(() {
+                    final index = day % 7;
+                    values[index] = !values[index];
+                  });
+                },
+                values: values,
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
                   "Location:",
                   style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
                 ),
@@ -279,6 +305,13 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               hour: _selectedTime.hour,
               minute: _selectedTime.minute,
               isActive: true,
+              isSunday: values[0],
+              isMonday: values[1],
+              isTuesday: values[2],
+              isWednesday: values[3],
+              isThursday: values[4],
+              isFriday: values[5],
+              isSaturday: values[6],
             );
 
             await DatabaseService.addReminder(newReminder);

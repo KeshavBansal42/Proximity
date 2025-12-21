@@ -36,67 +36,65 @@ Future<void> callback() async {
     if (!reminder.isActive) continue;
 
     final now = DateTime.now();
+    final dayIndex = now.weekday;
 
-    bool isHourMatch = now.hour == reminder.hour;
-    bool isMinuteInRange =
-        (now.minute >= reminder.minute) && (now.minute <= reminder.minute + 15);
+    if ((dayIndex == 1 && reminder.isMonday == true) ||
+        (dayIndex == 2 && reminder.isTuesday == true) ||
+        (dayIndex == 3 && reminder.isWednesday == true) ||
+        (dayIndex == 4 && reminder.isThursday == true) ||
+        (dayIndex == 5 && reminder.isFriday == true) ||
+        (dayIndex == 6 && reminder.isSaturday == true) ||
+        (dayIndex == 7 && reminder.isSunday == true)) {
+      bool isHourMatch = now.hour == reminder.hour;
+      bool isMinuteInRange =
+          (now.minute >= reminder.minute) &&
+          (now.minute <= reminder.minute + 1);
 
-    if (!isHourMatch || !isMinuteInRange) {
-      continue;
-    }
+      if (!isHourMatch || !isMinuteInRange) {
+        continue;
+      }
 
-    double distance = LocationService.getDistance(
-      lat1: position.latitude,
-      lon1: position.longitude,
-      lat2: reminder.latitude,
-      lon2: reminder.longitude,
-    );
-
-    print("Checking '${reminder.title}': Distance is $distance meters");
-
-    if (LocationService.isCloseEnough(distance, reminder.radius)) {
-      await NotificationService.showNotification(
-        "Proximity Alert!",
-        "You have reached ${reminder.title}.",
-      );
-    } else {
-      String distString = distance > 1000
-          ? "${(distance / 1000).toStringAsFixed(1)} km"
-          : "${distance.toInt()} meters";
-
-      final alarmSettings = AlarmSettings(
-        id: key,
-        dateTime: DateTime.now(),
-        assetAudioPath: 'assets/alarm.mp3',
-        loopAudio: true,
-        vibrate: true,
-        volumeSettings: VolumeSettings.fade(
-          volume: 1,
-          fadeDuration: Duration(seconds: 3),
-          volumeEnforced: true,
-        ),
-        notificationSettings: NotificationSettings(
-          title: 'Proximity Alert',
-          body: 'Time for ${reminder.title}, but you are $distString away!',
-          stopButton: 'Stop the alarm',
-          icon: 'notification_icon',
-          // iconColor: Color(0xff862778),
-        ),
+      double distance = LocationService.getDistance(
+        lat1: position.latitude,
+        lon1: position.longitude,
+        lat2: reminder.latitude,
+        lon2: reminder.longitude,
       );
 
-      await Alarm.set(alarmSettings: alarmSettings);
+      print("Checking '${reminder.title}': Distance is $distance meters");
+
+      if (LocationService.isCloseEnough(distance, reminder.radius)) {
+        await NotificationService.showNotification(
+          "Proximity Alert!",
+          "You have reached ${reminder.title}.",
+        );
+      } else {
+        String distString = distance > 1000
+            ? "${(distance / 1000).toStringAsFixed(1)} km"
+            : "${distance.toInt()} meters";
+
+        final alarmSettings = AlarmSettings(
+          id: key + 1,
+          dateTime: DateTime.now(),
+          assetAudioPath: 'assets/alarm.mp3',
+          loopAudio: true,
+          vibrate: true,
+          volumeSettings: VolumeSettings.fade(
+            volume: 1,
+            fadeDuration: Duration(seconds: 3),
+            volumeEnforced: true,
+          ),
+          notificationSettings: NotificationSettings(
+            title: 'Proximity Alert',
+            body: 'Time for ${reminder.title}, but you are $distString away!',
+            stopButton: 'Stop the alarm',
+            icon: 'notification_icon',
+            // iconColor: Color(0xff862778),
+          ),
+        );
+
+        await Alarm.set(alarmSettings: alarmSettings);
+      }
     }
-
-    final disabledReminder = Reminder(
-      title: reminder.title,
-      latitude: reminder.latitude,
-      longitude: reminder.longitude,
-      radius: reminder.radius,
-      hour: reminder.hour,
-      minute: reminder.minute,
-      isActive: false,
-    );
-
-    await box.put(key, disabledReminder);
   }
 }

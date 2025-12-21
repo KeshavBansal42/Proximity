@@ -334,6 +334,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.3"
+  flutter_localizations:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_map:
     dependency: "direct main"
     description:
@@ -1077,6 +1082,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.3"
+  weekday_selector:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: master
+      resolved-ref: e9c604a8cabb04ea3a169c3379c270c59810e4b0
+      url: "https://github.com/smaho-engineering/weekday_selector.git"
+    source: git
+    version: "1.1.0"
   win32:
     dependency: transitive
     description:

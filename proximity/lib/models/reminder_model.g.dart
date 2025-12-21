@@ -24,13 +24,20 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       isActive: fields[4] as bool,
       hour: fields[5] as int,
       minute: fields[6] as int,
+      isMonday: fields[7] as bool,
+      isTuesday: fields[8] as bool,
+      isWednesday: fields[9] as bool,
+      isThursday: fields[10] as bool,
+      isFriday: fields[11] as bool,
+      isSaturday: fields[12] as bool,
+      isSunday: fields[13] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Reminder obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
@@ -44,7 +51,21 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       ..writeByte(5)
       ..write(obj.hour)
       ..writeByte(6)
-      ..write(obj.minute);
+      ..write(obj.minute)
+      ..writeByte(7)
+      ..write(obj.isMonday)
+      ..writeByte(8)
+      ..write(obj.isTuesday)
+      ..writeByte(9)
+      ..write(obj.isWednesday)
+      ..writeByte(10)
+      ..write(obj.isThursday)
+      ..writeByte(11)
+      ..write(obj.isFriday)
+      ..writeByte(12)
+      ..write(obj.isSaturday)
+      ..writeByte(13)
+      ..write(obj.isSunday);
   }
 
   @override
