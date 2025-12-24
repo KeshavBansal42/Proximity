@@ -46,6 +46,9 @@ class Reminder{
   @HiveField(13)
   final bool isSunday;
 
+  @HiveField(14)
+  final DateTime? lastTriggeredDate;
+
   Reminder({
     required this.title,
     required this.latitude,
@@ -61,5 +64,6 @@ class Reminder{
     this.isFriday=true,
     this.isSaturday=true,
     this.isSunday=true,
+    this.lastTriggeredDate,
   });
 }

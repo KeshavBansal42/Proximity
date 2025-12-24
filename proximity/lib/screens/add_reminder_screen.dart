@@ -5,6 +5,7 @@ import '../services/database_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AddReminderScreen extends StatefulWidget {
   const AddReminderScreen({super.key});
@@ -16,26 +17,76 @@ class AddReminderScreen extends StatefulWidget {
 class _AddReminderScreenState extends State<AddReminderScreen> {
   final values = List.filled(7, false);
   TimeOfDay _selectedTime = TimeOfDay.now();
-  final now = DateTime.now();
   final TextEditingController _inputController = TextEditingController();
   final TextEditingController _radiusController = TextEditingController(
     text: "150",
   );
+
   LatLng? _selectedLocation;
   final MapController _mapController = MapController();
+  bool _isMapReady = false;
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
-    final todayIndex = now.weekday % 7;
+    final todayIndex = DateTime.now().weekday % 7;
     values[todayIndex] = true;
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.whileInUse) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Select 'Allow all the time' for alarms to work"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      await Future.delayed(const Duration(seconds: 2));
+      await Geolocator.openAppSettings();
+    }
+
+    Position position = await Geolocator.getCurrentPosition();
+
+    setState(() {
+      _selectedLocation = LatLng(position.latitude, position.longitude);
+    });
+
+    if (_isMapReady) {
+      _mapController.move(_selectedLocation!, 15.0);
+    }
   }
 
   Future<void> _pickTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue[800]!,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: Colors.blue[800]),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -45,258 +96,257 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
-
-    setState(() {
-      _selectedLocation = LatLng(position.latitude, position.longitude);
-    });
-
-    _mapController.move(_selectedLocation!, 15.0);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          "PROXIMITY",
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontFamily: "Courier",
-            fontSize: 28,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Container(
+          margin: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+          ),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsetsGeometry.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            //inputs
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Title:",
-                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
+        child: Column(
+          children: [
+            Container(
+              height: 400,
+              width: double.infinity,
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: LatLng(29.866, 77.899),
+                  initialZoom: 13,
+                  onMapReady: () {
+                    _isMapReady = true;
+                    if (_selectedLocation != null) {
+                      _mapController.move(_selectedLocation!, 15.0);
+                    }
+                  },
+                  onTap: (tapPosition, point) {
+                    setState(() {
+                      _selectedLocation = point;
+                    });
+                  },
                 ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.proximity',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      if (_selectedLocation != null)
+                        Marker(
+                          point: _selectedLocation!,
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
+            ),
 
-              Container(
+            Transform.translate(
+              offset: const Offset(0, -10),
+              child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(30),
                   ),
-                  child: TextField(
-                    controller: _inputController,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "e.g. MAI-101 lecture",
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 8),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Radius (m):",
-                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
-                ),
-              ),
-
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: TextField(
-                    controller: _radiusController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Recommended: 150",
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 8),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Time (in 24 hr format):",
-                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
-                ),
-              ),
-
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.access_time),
-                    const SizedBox(width: 12),
-
-                    Text(
-                      _selectedTime.format(context),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    TextButton(
-                      onPressed: _pickTime,
-                      child: Text(
-                        "Change Time",
-                        style: TextStyle(color: Colors.blue[800]),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
                     ),
                   ],
                 ),
-              ),
-
-              SizedBox(height: 8),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Select days of the week:",
-                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
-                ),
-              ),
-
-              WeekdaySelector(
-                color: Colors.blue,
-                splashColor: Colors.blue,
-                selectedFillColor: Colors.blue,
-                onChanged: (int day) {
-                  setState(() {
-                    final index = day % 7;
-                    values[index] = !values[index];
-                  });
-                },
-                values: values,
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "Location:",
-                  style: TextStyle(fontWeight: FontWeight.w400, fontSize: 20),
-                ),
-              ),
-
-              Container(
-                height: 300,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadiusGeometry.circular(16),
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(29.866, 77.899),
-                      initialZoom: 13,
-                      onTap: (tapPosition, point) {
-                        setState(() {
-                          _selectedLocation = point;
-                        });
-                      },
-                    ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.proximity',
+                      Text(
+                        "Title",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey[800],
+                        ),
                       ),
-                      MarkerLayer(
-                        markers: [
-                          if (_selectedLocation != null)
-                            Marker(
-                              point: _selectedLocation!,
-                              width: 40,
-                              height: 40,
-                              child: const Icon(
-                                Icons.location_on,
-                                color: Colors.red,
-                                size: 40,
+                      TextField(
+                        controller: _inputController,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "e.g. MAI-101",
+                          hintStyle: TextStyle(
+                            color: Colors.black.withOpacity(0.3)
+                          ),
+                          border: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.blue[800]!),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: 20),
+
+                      Text(
+                        "Time",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _pickTime,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_filled,
+                                color: Colors.blue[800],
                               ),
+                              SizedBox(width: 10),
+                              Text(
+                                _selectedTime.format(context),
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Courier',
+                                ),
+                              ),
+                              Spacer(),
+                              Text(
+                                "Change",
+                                style: GoogleFonts.poppins(
+                                  color: Colors.blue[800],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: 20),
+
+                      Text(
+                        "Radius: ${_radiusController.text}m ${_radiusController.text=="150"?"(Recommended)":""}",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value:
+                                  double.tryParse(_radiusController.text) ??
+                                  150,
+                              min: 100,
+                              max: 1000,
+                              divisions: 18,
+                              activeColor: Colors.blue[800],
+                              onChanged: (value) {
+                                setState(() {
+                                  _radiusController.text = value
+                                      .toInt()
+                                      .toString();
+                                });
+                              },
                             ),
+                          ),
                         ],
+                      ),
+
+                      SizedBox(height: 10),
+
+                      Text(
+                        "Active Days",
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      WeekdaySelector(
+                        onChanged: (int day) {
+                          setState(() {
+                            final index = day % 7;
+                            values[index] = !values[index];
+                          });
+                        },
+                        values: values,
+                        fillColor: Colors.white,
+                        selectedFillColor: Colors.blue[800],
+                        color: Colors.blue[800],
+                        selectedColor: Colors.white,
                       ),
                     ],
                   ),
                 ),
               ),
-
-              SizedBox(height: 80),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Container(
         height: 40,
-        width: MediaQuery.of(context).size.width * 0.9,
-        child: FloatingActionButton(
+        margin: EdgeInsets.symmetric(horizontal: 20),
+        width: double.infinity,
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.blue[800],
+          elevation: 5,
           onPressed: () async {
-            //save logic
-
             if (_inputController.text.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Please enter a title!")),
+                SnackBar(
+                  content: Text("Enter a title!", style: GoogleFonts.poppins()),
+                ),
               );
               return;
             }
-
             if (_selectedLocation == null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Please tap the map to pick a location!"),
+                SnackBar(
+                  content: Text(
+                    "Pick a location!",
+                    style: GoogleFonts.poppins(),
+                  ),
                 ),
               );
               return;
             }
 
             double radius = double.tryParse(_radiusController.text) ?? 150.0;
-
             final newReminder = Reminder(
               title: _inputController.text,
               latitude: _selectedLocation!.latitude,
@@ -315,13 +365,17 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
             );
 
             await DatabaseService.addReminder(newReminder);
-
-            if (context.mounted) {
-              Navigator.pop(context);
-            }
+            if (context.mounted) Navigator.pop(context);
           },
-          backgroundColor: Colors.blue[800],
-          child: Text("Save Reminder", style: TextStyle(color: Colors.white)),
+          label: Text(
+            "Save Reminder",
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          icon: Icon(Icons.check, color: Colors.white),
         ),
       ),
     );

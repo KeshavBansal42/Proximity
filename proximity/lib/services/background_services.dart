@@ -36,6 +36,17 @@ Future<void> callback() async {
     if (!reminder.isActive) continue;
 
     final now = DateTime.now();
+
+    if (reminder.lastTriggeredDate != null) {
+      final last = reminder.lastTriggeredDate!;
+
+      if (last.day == now.day &&
+          last.month == now.month &&
+          last.year == now.year) {
+        continue;
+      }
+    }
+
     final dayIndex = now.weekday;
 
     if ((dayIndex == 1 && reminder.isMonday == true) ||
@@ -48,7 +59,7 @@ Future<void> callback() async {
       bool isHourMatch = now.hour == reminder.hour;
       bool isMinuteInRange =
           (now.minute >= reminder.minute) &&
-          (now.minute <= reminder.minute + 1);
+          (now.minute <= reminder.minute + 5);
 
       if (!isHourMatch || !isMinuteInRange) {
         continue;
@@ -95,6 +106,26 @@ Future<void> callback() async {
 
         await Alarm.set(alarmSettings: alarmSettings);
       }
+
+      Reminder updatedReminer = Reminder(
+        title: reminder.title,
+        latitude: reminder.latitude,
+        longitude: reminder.longitude,
+        radius: reminder.radius,
+        hour: reminder.hour,
+        minute: reminder.minute,
+        lastTriggeredDate: DateTime.now(),
+        isActive: reminder.isActive,
+        isMonday: reminder.isMonday,
+        isTuesday: reminder.isTuesday,
+        isWednesday: reminder.isWednesday,
+        isThursday: reminder.isThursday,
+        isFriday: reminder.isFriday,
+        isSaturday: reminder.isSaturday,
+        isSunday: reminder.isSunday,
+      );
+
+      box.put(key, updatedReminer);
     }
   }
 }
