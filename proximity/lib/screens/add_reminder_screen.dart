@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import 'package:weekday_selector/weekday_selector.dart';
 import '../models/reminder_model.dart';
 import '../services/database_service.dart';
