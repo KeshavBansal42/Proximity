@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:weekday_selector/weekday_selector.dart';
 import '../models/reminder_model.dart';
 import '../services/database_service.dart';
@@ -23,6 +24,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   );
 
   LatLng? _selectedLocation;
+  LatLng? _myInitialLocation;
   final MapController _mapController = MapController();
   bool _isMapReady = false;
 
@@ -48,8 +50,10 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Select 'Allow all the time' for alarms to work"),
-            duration: Duration(seconds: 2),
+            content: Text(
+              "Click Permissions -> Location -> Allow all the time",
+            ),
+            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -60,6 +64,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     Position position = await Geolocator.getCurrentPosition();
 
     setState(() {
+      _myInitialLocation = LatLng(position.latitude, position.longitude);
       _selectedLocation = LatLng(position.latitude, position.longitude);
     });
 
@@ -81,7 +86,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Colors.blue[800]),
+              style: TextButton.styleFrom(foregroundColor: Colors.blue[600]),
             ),
           ),
           child: child!,
@@ -148,6 +153,26 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                   ),
                   MarkerLayer(
                     markers: [
+                      if (_myInitialLocation != null)
+                        Marker(
+                          point: _myInitialLocation!,
+                          height: 25,
+                          width: 25,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.blue[600],
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       if (_selectedLocation != null)
                         Marker(
                           point: _selectedLocation!,
@@ -194,6 +219,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         ),
                       ),
                       TextField(
+                        maxLength: 20,
                         controller: _inputController,
                         style: GoogleFonts.poppins(
                           fontSize: 18,
@@ -202,13 +228,13 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         decoration: InputDecoration(
                           hintText: "e.g. MAI-101",
                           hintStyle: TextStyle(
-                            color: Colors.black.withOpacity(0.3)
+                            color: Colors.black.withOpacity(0.3),
                           ),
                           border: UnderlineInputBorder(
                             borderSide: BorderSide(color: Colors.grey[300]!),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.blue[800]!),
+                            borderSide: BorderSide(color: Colors.blue[600]!),
                           ),
                         ),
                       ),
@@ -230,22 +256,22 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                             children: [
                               Icon(
                                 Icons.access_time_filled,
-                                color: Colors.blue[800],
+                                color: Colors.blue[600],
                               ),
                               SizedBox(width: 10),
                               Text(
                                 _selectedTime.format(context),
-                                style: TextStyle(
+                                style: GoogleFonts.quantico(
                                   fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Courier',
+                                  fontWeight: FontWeight.w400,
+                                  // fontFamily: 'Courier',
                                 ),
                               ),
                               Spacer(),
                               Text(
                                 "Change",
                                 style: GoogleFonts.poppins(
-                                  color: Colors.blue[800],
+                                  color: Colors.blue[600],
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -257,7 +283,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                       SizedBox(height: 20),
 
                       Text(
-                        "Radius: ${_radiusController.text}m ${_radiusController.text=="150"?"(Recommended)":""}",
+                        "Radius: ${_radiusController.text}m ${_radiusController.text == "150" ? "(Recommended)" : ""}",
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           color: Colors.grey[800],
@@ -273,7 +299,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                               min: 100,
                               max: 1000,
                               divisions: 18,
-                              activeColor: Colors.blue[800],
+                              activeColor: Colors.blue[600],
                               onChanged: (value) {
                                 setState(() {
                                   _radiusController.text = value
@@ -305,8 +331,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         },
                         values: values,
                         fillColor: Colors.white,
-                        selectedFillColor: Colors.blue[800],
-                        color: Colors.blue[800],
+                        selectedFillColor: Colors.blue[600],
+                        color: Colors.blue[600],
                         selectedColor: Colors.white,
                       ),
                     ],
@@ -323,7 +349,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         margin: EdgeInsets.symmetric(horizontal: 20),
         width: double.infinity,
         child: FloatingActionButton.extended(
-          backgroundColor: Colors.blue[800],
+          backgroundColor: Colors.blue[600],
           elevation: 5,
           onPressed: () async {
             if (_inputController.text.isEmpty) {

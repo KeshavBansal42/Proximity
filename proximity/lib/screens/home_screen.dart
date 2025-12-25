@@ -56,7 +56,7 @@ class _HomeState extends State<Home> {
                   final reminders = box.values.toList().cast<Reminder>();
 
                   if (reminders.isEmpty) {
-                    return const Center(child: Text("No reminders yet!"));
+                    return Center(child: Text("No reminders yet!",style: GoogleFonts.poppins()));
                   }
 
                   return ListView.builder(
@@ -118,7 +118,7 @@ class _HomeState extends State<Home> {
                                               child: Text(
                                                 reminder.title,
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 24,
+                                                  fontSize: 22,
                                                   fontWeight: FontWeight.w400,
                                                   color: isActive
                                                       ? Colors.black
@@ -181,16 +181,16 @@ class _HomeState extends State<Home> {
                                           children: [
                                             Icon(
                                               Icons.access_time_rounded,
-                                              size: 16,
+                                              size: 18,
                                               color: Colors.blueGrey,
                                             ),
-                                            const SizedBox(width: 4),
+                                            const SizedBox(width: 6),
                                             Text(
                                               "${reminder.hour.toString().padLeft(2, '0')}:${reminder.minute.toString().padLeft(2, '0')}",
-                                              style: TextStyle(
+                                              style: GoogleFonts.quantico(
                                                 fontSize: 32,
-                                                fontWeight: FontWeight.w600,
-                                                fontFamily: "Courier",
+                                                fontWeight: FontWeight.w500,
+                                                // fontFamily: "Courier",
                                                 color: Colors.blueGrey[800],
                                               ),
                                             ),
