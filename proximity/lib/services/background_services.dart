@@ -1,14 +1,14 @@
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:alarm/alarm.dart';
 import '../models/reminder_model.dart';
 import 'database_service.dart';
 import 'notification_service.dart';
 import 'location_service.dart';
-import 'package:alarm/alarm.dart';
 
 @pragma('vm:entry-point')
 Future<void> callback() async {
-  print("Background Service: Waking up...");
-
+  WidgetsFlutterBinding.ensureInitialized();
   await DatabaseService.init();
   await NotificationService.init();
   await Alarm.init();
@@ -20,7 +20,6 @@ Future<void> callback() async {
       timeLimit: const Duration(seconds: 10),
     );
   } catch (e) {
-    print("Background Error: Could not get location ($e)");
     return;
   }
 
@@ -29,17 +28,16 @@ Future<void> callback() async {
 
   if (keys.isEmpty) return;
 
+  final now = DateTime.now();
+
   for (var key in keys) {
     final reminder = box.get(key);
 
     if (reminder == null) continue;
     if (!reminder.isActive) continue;
 
-    final now = DateTime.now();
-
     if (reminder.lastTriggeredDate != null) {
       final last = reminder.lastTriggeredDate!;
-
       if (last.day == now.day &&
           last.month == now.month &&
           last.year == now.year) {
@@ -56,12 +54,17 @@ Future<void> callback() async {
         (dayIndex == 5 && reminder.isFriday == true) ||
         (dayIndex == 6 && reminder.isSaturday == true) ||
         (dayIndex == 7 && reminder.isSunday == true)) {
-      bool isHourMatch = now.hour == reminder.hour;
-      bool isMinuteInRange =
-          (now.minute >= reminder.minute) &&
-          (now.minute <= reminder.minute + 5);
+      final reminderTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        reminder.hour,
+        reminder.minute,
+      );
 
-      if (!isHourMatch || !isMinuteInRange) {
+      final difference = now.difference(reminderTime).inMinutes;
+
+      if (difference < 0 || difference > 5) {
         continue;
       }
 
@@ -71,8 +74,6 @@ Future<void> callback() async {
         lat2: reminder.latitude,
         lon2: reminder.longitude,
       );
-
-      print("Checking '${reminder.title}': Distance is $distance meters");
 
       if (LocationService.isCloseEnough(distance, reminder.radius)) {
         await NotificationService.showNotification(
@@ -85,7 +86,7 @@ Future<void> callback() async {
             : "${distance.toInt()} meters";
 
         final alarmSettings = AlarmSettings(
-          id: key + 1,
+          id: key,
           dateTime: DateTime.now(),
           assetAudioPath: 'assets/alarm.mp3',
           loopAudio: true,
@@ -93,28 +94,27 @@ Future<void> callback() async {
           volumeSettings: VolumeSettings.fade(
             volume: 1,
             fadeDuration: Duration(seconds: 3),
-            volumeEnforced: true,
+            volumeEnforced: false,
           ),
           notificationSettings: NotificationSettings(
             title: 'Proximity Alert',
             body: 'Time for ${reminder.title}, but you are $distString away!',
             stopButton: 'Stop the alarm',
             icon: 'notification_icon',
-            // iconColor: Color(0xff862778),
           ),
         );
 
         await Alarm.set(alarmSettings: alarmSettings);
       }
 
-      Reminder updatedReminer = Reminder(
+      final updatedReminder = Reminder(
         title: reminder.title,
         latitude: reminder.latitude,
         longitude: reminder.longitude,
         radius: reminder.radius,
         hour: reminder.hour,
         minute: reminder.minute,
-        lastTriggeredDate: DateTime.now(),
+        lastTriggeredDate: now,
         isActive: reminder.isActive,
         isMonday: reminder.isMonday,
         isTuesday: reminder.isTuesday,
@@ -125,7 +125,7 @@ Future<void> callback() async {
         isSunday: reminder.isSunday,
       );
 
-      box.put(key, updatedReminer);
+      await box.put(key, updatedReminder);
     }
   }
 }

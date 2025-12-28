@@ -56,14 +56,26 @@ class _HomeState extends State<Home> {
                   final reminders = box.values.toList().cast<Reminder>();
 
                   if (reminders.isEmpty) {
-                    return Center(child: Text("No reminders yet!",style: GoogleFonts.poppins()));
+                    return Center(
+                      child: Text(
+                        "No reminders yet!",
+                        style: GoogleFonts.poppins(),
+                      ),
+                    );
                   }
 
                   return ListView.builder(
+                    padding: const EdgeInsets.only(
+                      bottom: 100,
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                    ),
                     itemCount: reminders.length,
                     itemBuilder: (context, index) {
                       final reminder = reminders[index];
                       final isActive = reminder.isActive;
+                      final itemKey = box.keyAt(index);
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -179,15 +191,15 @@ class _HomeState extends State<Home> {
                                         //row for time and radius
                                         Row(
                                           children: [
-                                            Icon(
-                                              Icons.access_time_rounded,
-                                              size: 18,
-                                              color: Colors.blueGrey,
-                                            ),
-                                            const SizedBox(width: 6),
+                                            // Icon(
+                                            //   Icons.access_time_rounded,
+                                            //   size: 18,
+                                            //   color: Colors.blueGrey,
+                                            // ),
+                                            // const SizedBox(width: 6),
                                             Text(
                                               "${reminder.hour.toString().padLeft(2, '0')}:${reminder.minute.toString().padLeft(2, '0')}",
-                                              style: GoogleFonts.quantico(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 32,
                                                 fontWeight: FontWeight.w500,
                                                 // fontFamily: "Courier",
@@ -260,7 +272,93 @@ class _HomeState extends State<Home> {
                                             ),
                                             const Spacer(),
                                             InkWell(
-                                              onTap: () => box.deleteAt(index),
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        AddReminderScreen(
+                                                          itemKey: itemKey,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Icon(
+                                                Icons.edit_outlined,
+                                                color: Colors.blueGrey[400],
+                                                size: 20,
+                                              ),
+                                            ),
+                                            SizedBox(width: 16),
+                                            InkWell(
+                                              onTap: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (BuildContext context) {
+                                                    return AlertDialog(
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadiusGeometry.circular(
+                                                              16,
+                                                            ),
+                                                      ),
+                                                      title: Text(
+                                                        "Delete Reminder?",
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                      ),
+                                                      content: Text(
+                                                        "Are you sure you want to delete ${reminder.title}?",
+                                                        style:
+                                                            GoogleFonts.poppins(),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          child: Text(
+                                                            "Cancel",
+                                                            style:
+                                                                GoogleFonts.poppins(
+                                                                  color: Colors
+                                                                      .grey[600],
+                                                                ),
+                                                          ),
+                                                          onPressed: () {
+                                                            Navigator.of(
+                                                              context,
+                                                            ).pop();
+                                                          },
+                                                        ),
+                                                        TextButton(
+                                                          onPressed: () async {
+                                                            await box.deleteAt(
+                                                              index,
+                                                            );
+                                                            if (context.mounted)
+                                                              Navigator.of(
+                                                                context,
+                                                              ).pop();
+                                                          },
+                                                          child: Text(
+                                                            "Delete",
+                                                            style:
+                                                                GoogleFonts.poppins(
+                                                                  color: Colors
+                                                                      .red[400],
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
+                                                );
+                                              },
                                               child: Icon(
                                                 Icons.delete_outline,
                                                 color: Colors.red[300],
@@ -284,6 +382,7 @@ class _HomeState extends State<Home> {
                 },
               ),
             ),
+            // SizedBox(height: 100),
           ],
         ),
       ),

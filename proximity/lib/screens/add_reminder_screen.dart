@@ -6,9 +6,12 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class AddReminderScreen extends StatefulWidget {
-  const AddReminderScreen({super.key});
+  final int? itemKey;
+
+  const AddReminderScreen({super.key, this.itemKey});
 
   @override
   State<AddReminderScreen> createState() => _AddReminderScreenState();
@@ -30,6 +33,28 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.itemKey != null) {
+      final box = DatabaseService.getBox();
+
+      final data = box.get(widget.itemKey) as Reminder?;
+
+      if (data != null) {
+        _inputController.text = data.title;
+        _radiusController.text = data.radius.toInt().toString();
+        _selectedLocation = LatLng(data.latitude, data.longitude);
+        _selectedTime = TimeOfDay(hour: data.hour, minute: data.minute);
+
+        if (data.isMonday == true) values[1] = true;
+        if (data.isTuesday == true) values[2] = true;
+        if (data.isWednesday == true) values[3] = true;
+        if (data.isThursday == true) values[4] = true;
+        if (data.isFriday == true) values[5] = true;
+        if (data.isSaturday == true) values[6] = true;
+        if (data.isSunday == true) values[0] = true;
+      }
+    }
+
     final todayIndex = DateTime.now().weekday % 7;
     values[todayIndex] = true;
     _getCurrentLocation();
@@ -150,6 +175,20 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.proximity',
                   ),
+                  if (_selectedLocation != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: _selectedLocation!,
+                          radius:
+                              double.tryParse(_radiusController.text) ?? 150,
+                          useRadiusInMeter: true,
+                          color: Colors.blue.withOpacity(0.2),
+                          borderColor: Colors.blue.shade600,
+                          borderStrokeWidth: 2,
+                        ),
+                      ],
+                    ),
                   MarkerLayer(
                     markers: [
                       if (_myInitialLocation != null)
@@ -334,6 +373,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         color: Colors.blue[600],
                         selectedColor: Colors.white,
                       ),
+                      SizedBox(height: 50),
                     ],
                   ),
                 ),
@@ -372,6 +412,47 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
             }
 
             double radius = double.tryParse(_radiusController.text) ?? 150.0;
+
+            final box = DatabaseService.getBox();
+            List<String> clashingDays = [];
+
+            for (var key in box.keys) {
+              if (widget.itemKey != null && widget.itemKey == key) continue;
+
+              final existing = box.get(key) as Reminder;
+
+              if (existing.hour == _selectedTime.hour &&
+                  existing.minute == _selectedTime.minute) {
+                if (values[0] && existing.isSunday) clashingDays.add("Sunday");
+                if (values[1] && existing.isMonday) clashingDays.add("Monday");
+                if (values[2] && existing.isTuesday)
+                  clashingDays.add("Tuesday");
+                if (values[3] && existing.isWednesday)
+                  clashingDays.add("Wednesday");
+                if (values[4] && existing.isThursday)
+                  clashingDays.add("Thursday");
+                if (values[5] && existing.isFriday) clashingDays.add("Friday");
+                if (values[6] && existing.isSaturday)
+                  clashingDays.add("Saturday");
+              }
+            }
+
+            if (clashingDays.isNotEmpty) {
+              String daysString = clashingDays.toSet().join(", ");
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.red[400],
+                  behavior: SnackBarBehavior.floating,
+                  content: Text(
+                    "You already have a reminder at ${_selectedTime.format(context)} on: $daysString",
+                    style: GoogleFonts.poppins(color: Colors.white),
+                  ),
+                ),
+              );
+              return;
+            }
+
             final newReminder = Reminder(
               title: _inputController.text,
               latitude: _selectedLocation!.latitude,
@@ -387,9 +468,15 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               isThursday: values[4],
               isFriday: values[5],
               isSaturday: values[6],
+              lastTriggeredDate: null,
             );
 
-            await DatabaseService.addReminder(newReminder);
+            if (widget.itemKey != null) {
+              final box = DatabaseService.getBox();
+              await box.put(widget.itemKey, newReminder);
+            } else
+              await DatabaseService.addReminder(newReminder);
+
             if (context.mounted) Navigator.pop(context);
           },
           label: Text(
