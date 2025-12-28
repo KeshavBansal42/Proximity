@@ -16,8 +16,10 @@ Future<void> callback() async {
   Position? position;
   try {
     position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 10),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
     );
   } catch (e) {
     return;

@@ -6,7 +6,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 class AddReminderScreen extends StatefulWidget {
   final int? itemKey;
@@ -37,7 +36,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     if (widget.itemKey != null) {
       final box = DatabaseService.getBox();
 
-      final data = box.get(widget.itemKey) as Reminder?;
+      final data = box.get(widget.itemKey);
 
       if (data != null) {
         _inputController.text = data.title;
