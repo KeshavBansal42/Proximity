@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/reminder_model.dart';
 import '../services/database_service.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:alarm/alarm.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -138,7 +139,7 @@ class _HomeState extends State<Home> {
                                                   decoration: isActive
                                                       ? null
                                                       : TextDecoration
-                                                            .lineThrough,
+                                                          .lineThrough,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -154,8 +155,9 @@ class _HomeState extends State<Home> {
                                                 activeTrackColor:
                                                     Colors.blue[600],
                                                 value: isActive,
-                                                onChanged: (bool value) {
-                                                  final updatedReminder = Reminder(
+                                                onChanged: (bool value) async {
+                                                  final updatedReminder =
+                                                      Reminder(
                                                     title: reminder.title,
                                                     latitude: reminder.latitude,
                                                     longitude:
@@ -178,10 +180,25 @@ class _HomeState extends State<Home> {
                                                         reminder.isSaturday,
                                                     isSunday: reminder.isSunday,
                                                   );
-                                                  box.putAt(
-                                                    index,
+
+                                                  await box.put(
+                                                    itemKey,
                                                     updatedReminder,
                                                   );
+                                                  await box.flush();
+
+                                                  if (value == false) {
+                                                    // keys[index] is the Hive key.
+                                                    // Remember we used (key + 1) for the Alarm ID in background_services.dart
+                                                    // keys[index] might be string or int depending on Hive box type,
+                                                    // but your previous code treated it as int for Alarm ID.
+                                                    // Assuming key is int:
+                                                    if (itemKey is int) {
+                                                      await Alarm.stop(
+                                                        itemKey + 1,
+                                                      );
+                                                    }
+                                                  }
                                                 },
                                               ),
                                             ),

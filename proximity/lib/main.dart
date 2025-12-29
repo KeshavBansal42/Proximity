@@ -19,15 +19,16 @@ void main() async {
   }
 
   if (await Permission.ignoreBatteryOptimizations.isDenied) {
-     await Permission.ignoreBatteryOptimizations.request();
+    await Permission.ignoreBatteryOptimizations.request();
   }
 
   await AndroidAlarmManager.initialize();
-  await AndroidAlarmManager.periodic(
-    const Duration(minutes: 1),
+  await AndroidAlarmManager.oneShot(
+    const Duration(seconds: 0),
     0,
     callback,
     wakeup: true,
+    exact: true,
   );
   runApp(const MyApp());
 }

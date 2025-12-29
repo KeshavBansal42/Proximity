@@ -1,6 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:alarm/alarm.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:audio_session/audio_session.dart';
 import '../models/reminder_model.dart';
 import 'database_service.dart';
 import 'notification_service.dart';
@@ -9,98 +11,127 @@ import 'location_service.dart';
 @pragma('vm:entry-point')
 Future<void> callback() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseService.init();
-  await NotificationService.init();
-  await Alarm.init();
 
-  Position? position;
   try {
-    position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 10),
-      ),
-    );
+    await DatabaseService.init();
+    await NotificationService.init();
+    await Alarm.init();
   } catch (e) {
     return;
   }
 
+  bool upcomingAlarmDetected = false;
+  Position? position;
+
+  try {
+    position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 5),
+      ),
+    );
+  } catch (e) {}
+
   final box = DatabaseService.getBox();
   final keys = box.keys.toList();
 
-  if (keys.isEmpty) return;
-
-  final now = DateTime.now();
-
-  for (var key in keys) {
-    final reminder = box.get(key);
-
-    if (reminder == null) continue;
-    if (!reminder.isActive) continue;
-
-    if (reminder.lastTriggeredDate != null) {
-      final last = reminder.lastTriggeredDate!;
-      if (last.day == now.day &&
-          last.month == now.month &&
-          last.year == now.year) {
-        continue;
-      }
-    }
-
+  if (keys.isNotEmpty) {
+    final now = DateTime.now();
+    final nowInMinutes = now.hour * 60 + now.minute;
     final dayIndex = now.weekday;
 
-    if ((dayIndex == 1 && reminder.isMonday == true) ||
-        (dayIndex == 2 && reminder.isTuesday == true) ||
-        (dayIndex == 3 && reminder.isWednesday == true) ||
-        (dayIndex == 4 && reminder.isThursday == true) ||
-        (dayIndex == 5 && reminder.isFriday == true) ||
-        (dayIndex == 6 && reminder.isSaturday == true) ||
-        (dayIndex == 7 && reminder.isSunday == true)) {
-      final reminderTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        reminder.hour,
-        reminder.minute,
-      );
+    for (var key in keys) {
+      final reminder = box.get(key);
 
-      final difference = now.difference(reminderTime).inMinutes;
+      if (reminder == null) continue;
+      if (!reminder.isActive) continue;
 
-      if (difference < 0 || difference > 5) {
+      if (reminder.lastTriggeredDate != null) {
+        final last = reminder.lastTriggeredDate!;
+        if (last.day == now.day &&
+            last.month == now.month &&
+            last.year == now.year) {
+          continue;
+        }
+      }
+
+      bool isToday = (dayIndex == 1 && reminder.isMonday) ||
+          (dayIndex == 2 && reminder.isTuesday) ||
+          (dayIndex == 3 && reminder.isWednesday) ||
+          (dayIndex == 4 && reminder.isThursday) ||
+          (dayIndex == 5 && reminder.isFriday) ||
+          (dayIndex == 6 && reminder.isSaturday) ||
+          (dayIndex == 7 && reminder.isSunday);
+
+      if (!isToday) continue;
+
+      int reminderInMinutes = reminder.hour * 60 + reminder.minute;
+      int diff = nowInMinutes - reminderInMinutes;
+
+      if (diff < -1000) diff += 1440;
+      if (diff > 1000) diff -= 1440;
+
+      if (diff >= -30 && diff <= 5) {
+        upcomingAlarmDetected = true;
+      }
+
+      if (diff < 0 || diff > 2) {
         continue;
       }
 
-      double distance = LocationService.getDistance(
-        lat1: position.latitude,
-        lon1: position.longitude,
-        lat2: reminder.latitude,
-        lon2: reminder.longitude,
-      );
+      bool userIsClose = false;
+      String distString = "Unknown Location";
 
-      if (LocationService.isCloseEnough(distance, reminder.radius)) {
+      if (position != null) {
+        double distance = LocationService.getDistance(
+          lat1: position.latitude,
+          lon1: position.longitude,
+          lat2: reminder.latitude,
+          lon2: reminder.longitude,
+        );
+        userIsClose = LocationService.isCloseEnough(distance, reminder.radius);
+        distString = distance > 1000
+            ? "${(distance / 1000).toStringAsFixed(1)} km"
+            : "${distance.toInt()} meters";
+      } else {
+        userIsClose = false;
+      }
+
+      if (userIsClose) {
         await NotificationService.showNotification(
           "Proximity Alert!",
           "You have reached ${reminder.title}.",
         );
       } else {
-        String distString = distance > 1000
-            ? "${(distance / 1000).toStringAsFixed(1)} km"
-            : "${distance.toInt()} meters";
+        try {
+          final session = await AudioSession.instance;
+          await session.configure(const AudioSessionConfiguration(
+            avAudioSessionCategory: AVAudioSessionCategory.playback,
+            avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.none,
+            androidAudioAttributes: AndroidAudioAttributes(
+              contentType: AndroidAudioContentType.speech,
+              usage: AndroidAudioUsage.assistanceNavigationGuidance,
+            ),
+            androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientExclusive,
+          ));
+          await session.setActive(true);
+        } catch (e) {}
+
+        await Alarm.stop(key + 1);
 
         final alarmSettings = AlarmSettings(
-          id: key,
+          id: key + 1,
           dateTime: DateTime.now(),
           assetAudioPath: 'assets/alarm.mp3',
           loopAudio: true,
           vibrate: true,
-          volumeSettings: VolumeSettings.fade(
-            volume: 1,
-            fadeDuration: Duration(seconds: 3),
+          volumeSettings: VolumeSettings.fixed(
+            volume: 1.0,
             volumeEnforced: false,
           ),
           notificationSettings: NotificationSettings(
             title: 'Proximity Alert',
-            body: 'Time for ${reminder.title}, but you are $distString away!',
+            body: 'Time for ${reminder.title}. Distance: $distString',
             stopButton: 'Stop the alarm',
             icon: 'notification_icon',
           ),
@@ -128,6 +159,21 @@ Future<void> callback() async {
       );
 
       await box.put(key, updatedReminder);
+      await box.flush();
+      await Future.delayed(const Duration(seconds: 1));
     }
   }
+
+  await box.close();
+
+  int nextInterval = upcomingAlarmDetected ? 1 : 15;
+
+  await AndroidAlarmManager.oneShot(
+    Duration(minutes: nextInterval),
+    0,
+    callback,
+    wakeup: true,
+    exact: true,
+    rescheduleOnReboot: true,
+  );
 }

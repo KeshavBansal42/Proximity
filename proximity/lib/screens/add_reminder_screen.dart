@@ -6,6 +6,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import '../services/background_services.dart';
+import 'package:flutter/cupertino.dart';
 
 class AddReminderScreen extends StatefulWidget {
   final int? itemKey;
@@ -28,6 +31,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   LatLng? _myInitialLocation;
   final MapController _mapController = MapController();
   bool _isMapReady = false;
+  TimeOfDay? _originalTime;
 
   @override
   void initState() {
@@ -35,7 +39,6 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
 
     if (widget.itemKey != null) {
       final box = DatabaseService.getBox();
-
       final data = box.get(widget.itemKey);
 
       if (data != null) {
@@ -43,6 +46,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         _radiusController.text = data.radius.toInt().toString();
         _selectedLocation = LatLng(data.latitude, data.longitude);
         _selectedTime = TimeOfDay(hour: data.hour, minute: data.minute);
+        _originalTime = TimeOfDay(hour: data.hour, minute: data.minute);
 
         if (data.isMonday == true) values[1] = true;
         if (data.isTuesday == true) values[2] = true;
@@ -52,10 +56,11 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         if (data.isSaturday == true) values[6] = true;
         if (data.isSunday == true) values[0] = true;
       }
+    } else {
+      final todayIndex = DateTime.now().weekday % 7;
+      values[todayIndex] = true;
     }
 
-    final todayIndex = DateTime.now().weekday % 7;
-    values[todayIndex] = true;
     _getCurrentLocation();
   }
 
@@ -96,40 +101,14 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     }
   }
 
-  Future<void> _pickTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Colors.blue[800]!,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Colors.blue[600]),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: Container(
@@ -226,7 +205,6 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                 ],
               ),
             ),
-
             Transform.translate(
               offset: const Offset(0, -10),
               child: Container(
@@ -275,9 +253,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                           ),
                         ),
                       ),
-
                       SizedBox(height: 20),
-
                       Text(
                         "Time",
                         style: GoogleFonts.poppins(
@@ -285,40 +261,55 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                           color: Colors.grey[800],
                         ),
                       ),
-                      InkWell(
-                        onTap: _pickTime,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.access_time_filled,
-                                color: Colors.blue[600],
+                      SizedBox(height: 10),
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: CupertinoTheme(
+                          data: CupertinoThemeData(
+                            textTheme: CupertinoTextThemeData(
+                              dateTimePickerTextStyle: GoogleFonts.poppins(
+                                color: Colors
+                                    .blue[600],
+                                fontSize:20,
+                                fontWeight: FontWeight.w500,
                               ),
-                              SizedBox(width: 10),
-                              Text(
-                                _selectedTime.format(context),
-                                style: GoogleFonts.quantico(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w400,
-                                  // fontFamily: 'Courier',
-                                ),
-                              ),
-                              Spacer(),
-                              Text(
-                                "Change",
-                                style: GoogleFonts.poppins(
-                                  color: Colors.blue[600],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                            ),
+                          ),
+                          child: CupertinoDatePicker(
+                            mode: CupertinoDatePickerMode.time,
+                            initialDateTime: DateTime(
+                              DateTime.now().year,
+                              DateTime.now().month,
+                              DateTime.now().day,
+                              _selectedTime.hour,
+                              _selectedTime.minute,
+                            ),
+                            use24hFormat: false,
+                            itemExtent: 45,
+                            onDateTimeChanged: (DateTime newDate) {
+                              setState(() {
+                                _selectedTime = TimeOfDay(
+                                  hour: newDate.hour,
+                                  minute: newDate.minute,
+                                );
+                              });
+                            },
                           ),
                         ),
                       ),
-
                       SizedBox(height: 20),
-
                       Text(
                         "Radius: ${_radiusController.text}m ${_radiusController.text == "150" ? "(Recommended)" : ""}",
                         style: GoogleFonts.poppins(
@@ -348,9 +339,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                           ),
                         ],
                       ),
-
                       SizedBox(height: 10),
-
                       Text(
                         "Active Days",
                         style: GoogleFonts.poppins(
@@ -452,6 +441,23 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               return;
             }
 
+            DateTime? triggeredDateToSave;
+
+            if (widget.itemKey != null && _originalTime != null) {
+              final existing = box.get(widget.itemKey) as Reminder;
+              bool timeChanged =
+                  (_originalTime!.hour != _selectedTime.hour) ||
+                  (_originalTime!.minute != _selectedTime.minute);
+
+              if (timeChanged) {
+                triggeredDateToSave = null;
+              } else {
+                triggeredDateToSave = existing.lastTriggeredDate;
+              }
+            } else {
+              triggeredDateToSave = null;
+            }
+
             final newReminder = Reminder(
               title: _inputController.text,
               latitude: _selectedLocation!.latitude,
@@ -467,14 +473,25 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               isThursday: values[4],
               isFriday: values[5],
               isSaturday: values[6],
-              lastTriggeredDate: null,
+              lastTriggeredDate: triggeredDateToSave,
             );
 
             if (widget.itemKey != null) {
-              final box = DatabaseService.getBox();
               await box.put(widget.itemKey, newReminder);
-            } else
+            } else {
               await DatabaseService.addReminder(newReminder);
+            }
+
+            await box.flush();
+
+            await AndroidAlarmManager.oneShot(
+              const Duration(seconds: 5),
+              0,
+              callback,
+              wakeup: true,
+              exact: true,
+              rescheduleOnReboot: true,
+            );
 
             if (context.mounted) Navigator.pop(context);
           },
