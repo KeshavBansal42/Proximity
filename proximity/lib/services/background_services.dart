@@ -17,6 +17,7 @@ Future<void> callback() async {
     await NotificationService.init();
     await Alarm.init();
   } catch (e) {
+    print("Error initializing background services: $e");
     return;
   }
 
@@ -30,7 +31,9 @@ Future<void> callback() async {
         timeLimit: Duration(seconds: 5),
       ),
     );
-  } catch (e) {}
+  } catch (e) {
+    print("Error getting location in background: $e");
+  }
 
   final box = DatabaseService.getBox();
   final keys = box.keys.toList();
@@ -38,7 +41,6 @@ Future<void> callback() async {
   if (keys.isNotEmpty) {
     final now = DateTime.now();
     final nowInMinutes = now.hour * 60 + now.minute;
-    final dayIndex = now.weekday;
 
     for (var key in keys) {
       final reminder = box.get(key);
@@ -55,14 +57,9 @@ Future<void> callback() async {
         }
       }
 
-      bool isToday = (dayIndex == 1 && reminder.isMonday) ||
-          (dayIndex == 2 && reminder.isTuesday) ||
-          (dayIndex == 3 && reminder.isWednesday) ||
-          (dayIndex == 4 && reminder.isThursday) ||
-          (dayIndex == 5 && reminder.isFriday) ||
-          (dayIndex == 6 && reminder.isSaturday) ||
-          (dayIndex == 7 && reminder.isSunday);
+      final currentDayBit = now.weekday % 7;
 
+      bool isToday = (reminder.activeDays >> currentDayBit) & 1 == 1;
       if (!isToday) continue;
 
       int reminderInMinutes = reminder.hour * 60 + reminder.minute;
@@ -112,17 +109,20 @@ Future<void> callback() async {
               contentType: AndroidAudioContentType.speech,
               usage: AndroidAudioUsage.assistanceNavigationGuidance,
             ),
-            androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientExclusive,
+            androidAudioFocusGainType:
+                AndroidAudioFocusGainType.gainTransientExclusive,
           ));
           await session.setActive(true);
-        } catch (e) {}
+        } catch (e) {
+          print("Error configuring audio session: $e");
+        }
 
         await Alarm.stop(key + 1);
 
         final alarmSettings = AlarmSettings(
           id: key + 1,
           dateTime: DateTime.now(),
-          assetAudioPath: 'assets/alarm.mp3',
+          assetAudioPath: reminder.audioPath ?? 'assets/alarm.mp3',
           loopAudio: true,
           vibrate: true,
           volumeSettings: VolumeSettings.fixed(
@@ -149,13 +149,8 @@ Future<void> callback() async {
         minute: reminder.minute,
         lastTriggeredDate: now,
         isActive: reminder.isActive,
-        isMonday: reminder.isMonday,
-        isTuesday: reminder.isTuesday,
-        isWednesday: reminder.isWednesday,
-        isThursday: reminder.isThursday,
-        isFriday: reminder.isFriday,
-        isSaturday: reminder.isSaturday,
-        isSunday: reminder.isSunday,
+        activeDays: reminder.activeDays,
+        audioPath: reminder.audioPath,
       );
 
       await box.put(key, updatedReminder);

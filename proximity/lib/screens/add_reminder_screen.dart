@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import '../services/background_services.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddReminderScreen extends StatefulWidget {
   final int? itemKey;
@@ -32,6 +33,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   final MapController _mapController = MapController();
   bool _isMapReady = false;
   TimeOfDay? _originalTime;
+  String? _selectedAudioPath;
 
   @override
   void initState() {
@@ -47,14 +49,9 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         _selectedLocation = LatLng(data.latitude, data.longitude);
         _selectedTime = TimeOfDay(hour: data.hour, minute: data.minute);
         _originalTime = TimeOfDay(hour: data.hour, minute: data.minute);
+        _selectedAudioPath = data.audioPath;
 
-        if (data.isMonday == true) values[1] = true;
-        if (data.isTuesday == true) values[2] = true;
-        if (data.isWednesday == true) values[3] = true;
-        if (data.isThursday == true) values[4] = true;
-        if (data.isFriday == true) values[5] = true;
-        if (data.isSaturday == true) values[6] = true;
-        if (data.isSunday == true) values[0] = true;
+        _unpackIntToDays(data.activeDays);
       }
     } else {
       final todayIndex = DateTime.now().weekday % 7;
@@ -62,6 +59,26 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     }
 
     _getCurrentLocation();
+  }
+
+  int _packDaysToInt(List<bool> values) {
+    int packed = 0;
+    for (int i = 0; i < 7; i++) {
+      if (values[i]) {
+        packed |= (1 << i);
+      }
+    }
+    return packed;
+  }
+
+  void _unpackIntToDays(int packed) {
+    for (int i = 0; i < 7; i++) {
+      if ((packed >> i) & 1 == 1) {
+        values[i] = true;
+      } else {
+        values[i] = false;
+      }
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -93,11 +110,25 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
 
     setState(() {
       _myInitialLocation = LatLng(position.latitude, position.longitude);
-      _selectedLocation = LatLng(position.latitude, position.longitude);
+      if (widget.itemKey == null) {
+        _selectedLocation = LatLng(position.latitude, position.longitude);
+      }
     });
 
     if (_isMapReady) {
       _mapController.move(_selectedLocation!, 15.0);
+    }
+  }
+
+  Future<void> _pickAudio() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedAudioPath = result.files.single.path;
+      });
     }
   }
 
@@ -280,9 +311,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                           data: CupertinoThemeData(
                             textTheme: CupertinoTextThemeData(
                               dateTimePickerTextStyle: GoogleFonts.poppins(
-                                color: Colors
-                                    .blue[600],
-                                fontSize:20,
+                                color: Colors.blue[600],
+                                fontSize: 20,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -361,6 +391,25 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         color: Colors.blue[600],
                         selectedColor: Colors.white,
                       ),
+                      SizedBox(height: 10),
+                      ListTile(
+                        title: Text(
+                          _selectedAudioPath == null
+                              ? "Select Alarm Sound"
+                              : "Sound Selected",
+                        ),
+                        subtitle: Text(
+                          _selectedAudioPath != null
+                              ? _selectedAudioPath!.split('/').last
+                              : "Default: Alarm.mp3",
+                        ),
+                        trailing: Icon(Icons.music_note, color: Colors.blue),
+                        onTap: _pickAudio,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
                       SizedBox(height: 50),
                     ],
                   ),
@@ -411,17 +460,13 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
 
               if (existing.hour == _selectedTime.hour &&
                   existing.minute == _selectedTime.minute) {
-                if (values[0] && existing.isSunday) clashingDays.add("Sunday");
-                if (values[1] && existing.isMonday) clashingDays.add("Monday");
-                if (values[2] && existing.isTuesday)
-                  clashingDays.add("Tuesday");
-                if (values[3] && existing.isWednesday)
-                  clashingDays.add("Wednesday");
-                if (values[4] && existing.isThursday)
-                  clashingDays.add("Thursday");
-                if (values[5] && existing.isFriday) clashingDays.add("Friday");
-                if (values[6] && existing.isSaturday)
-                  clashingDays.add("Saturday");
+                if (values[0] && (existing.activeDays&1==1)) clashingDays.add("Sunday");
+                if (values[1] && (existing.activeDays&2==1)) clashingDays.add("Monday");
+                if (values[2] && (existing.activeDays&4==1)) clashingDays.add("Tuesday");
+                if (values[3] && (existing.activeDays&8==1)) clashingDays.add("Wednesday");
+                if (values[4] && (existing.activeDays&16==1)) clashingDays.add("Thursday");
+                if (values[5] && (existing.activeDays&32==1)) clashingDays.add("Friday");
+                if (values[6] && (existing.activeDays&64==1)) clashingDays.add("Saturday");
               }
             }
 
@@ -466,14 +511,9 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
               hour: _selectedTime.hour,
               minute: _selectedTime.minute,
               isActive: true,
-              isSunday: values[0],
-              isMonday: values[1],
-              isTuesday: values[2],
-              isWednesday: values[3],
-              isThursday: values[4],
-              isFriday: values[5],
-              isSaturday: values[6],
+              activeDays: _packDaysToInt(values),
               lastTriggeredDate: triggeredDateToSave,
+              audioPath: _selectedAudioPath,
             );
 
             if (widget.itemKey != null) {

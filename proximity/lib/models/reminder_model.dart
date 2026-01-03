@@ -26,28 +26,13 @@ class Reminder{
   final int minute;
 
   @HiveField(7)
-  final bool isMonday;
+  final int activeDays;
 
   @HiveField(8)
-  final bool isTuesday;
+  final DateTime? lastTriggeredDate;
 
   @HiveField(9)
-  final bool isWednesday;
-
-  @HiveField(10)
-  final bool isThursday;
-
-  @HiveField(11)
-  final bool isFriday;
-
-  @HiveField(12)
-  final bool isSaturday;
-
-  @HiveField(13)
-  final bool isSunday;
-
-  @HiveField(14)
-  final DateTime? lastTriggeredDate;
+  final String? audioPath;
 
   Reminder({
     required this.title,
@@ -57,13 +42,8 @@ class Reminder{
     this.isActive = true,
     required this.hour,
     required this.minute,
-    this.isMonday=true,
-    this.isTuesday=true,
-    this.isWednesday=true,
-    this.isThursday=true,
-    this.isFriday=true,
-    this.isSaturday=true,
-    this.isSunday=true,
+    required this.activeDays,
     this.lastTriggeredDate,
+    this.audioPath,
   });
 }

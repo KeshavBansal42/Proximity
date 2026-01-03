@@ -60,7 +60,7 @@ class _HomeState extends State<Home> {
                     return Center(
                       child: Text(
                         "No reminders yet!",
-                        style: GoogleFonts.poppins(),
+                        style: GoogleFonts.poppins(fontSize: 18),
                       ),
                     );
                   }
@@ -139,7 +139,7 @@ class _HomeState extends State<Home> {
                                                   decoration: isActive
                                                       ? null
                                                       : TextDecoration
-                                                          .lineThrough,
+                                                            .lineThrough,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -156,8 +156,7 @@ class _HomeState extends State<Home> {
                                                     Colors.blue[600],
                                                 value: isActive,
                                                 onChanged: (bool value) async {
-                                                  final updatedReminder =
-                                                      Reminder(
+                                                  final updatedReminder = Reminder(
                                                     title: reminder.title,
                                                     latitude: reminder.latitude,
                                                     longitude:
@@ -168,17 +167,8 @@ class _HomeState extends State<Home> {
                                                     isActive: value,
                                                     lastTriggeredDate: reminder
                                                         .lastTriggeredDate,
-                                                    isMonday: reminder.isMonday,
-                                                    isTuesday:
-                                                        reminder.isTuesday,
-                                                    isWednesday:
-                                                        reminder.isWednesday,
-                                                    isThursday:
-                                                        reminder.isThursday,
-                                                    isFriday: reminder.isFriday,
-                                                    isSaturday:
-                                                        reminder.isSaturday,
-                                                    isSunday: reminder.isSunday,
+                                                    activeDays:
+                                                        reminder.activeDays,
                                                   );
 
                                                   await box.put(
@@ -254,37 +244,37 @@ class _HomeState extends State<Home> {
                                           children: [
                                             _buildDayDot(
                                               'M',
-                                              reminder.isMonday,
+                                              (reminder.activeDays & 2) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'T',
-                                              reminder.isTuesday,
+                                              (reminder.activeDays & 4) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'W',
-                                              reminder.isWednesday,
+                                              (reminder.activeDays & 8) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'T',
-                                              reminder.isThursday,
+                                              (reminder.activeDays & 16) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'F',
-                                              reminder.isFriday,
+                                              (reminder.activeDays & 32) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'S',
-                                              reminder.isSaturday,
+                                              (reminder.activeDays & 64) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'S',
-                                              reminder.isSunday,
+                                              (reminder.activeDays & 1) != 0,
                                               isActive,
                                             ),
                                             const Spacer(),
