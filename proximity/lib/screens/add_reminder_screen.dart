@@ -10,6 +10,8 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import '../services/background_services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:file_picker/file_picker.dart';
+import '../models/saved_location_model.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class AddReminderScreen extends StatefulWidget {
   final int? itemKey;
@@ -132,6 +134,72 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
     }
   }
 
+  Future<void> _saveCurrentLocation() async {
+    if (_selectedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please pick a location on the map first!")),
+      );
+      return;
+    }
+
+    TextEditingController nameController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text(
+          "Save this Spot",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            hintText: "Name (e.g. LHC, Gym, Hostel)",
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.blue, width: 2.0),
+            ),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                final loc = SavedLocation(
+                  name: nameController.text,
+                  latitude: _selectedLocation!.latitude,
+                  longitude: _selectedLocation!.longitude,
+                );
+                DatabaseService.addLocation(loc);
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text("Location saved!")));
+              }
+            },
+            child: Text(
+              "Save",
+              style: GoogleFonts.poppins(
+                color: Colors.blue[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,77 +229,274 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
             Container(
               height: 400,
               width: double.infinity,
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: LatLng(29.866, 77.899),
-                  initialZoom: 13,
-                  onMapReady: () {
-                    _isMapReady = true;
-                    if (_selectedLocation != null) {
-                      _mapController.move(_selectedLocation!, 15.0);
-                    }
-                  },
-                  onTap: (tapPosition, point) {
-                    setState(() {
-                      _selectedLocation = point;
-                    });
-                  },
-                ),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.proximity',
-                  ),
-                  if (_selectedLocation != null)
-                    CircleLayer(
-                      circles: [
-                        CircleMarker(
-                          point: _selectedLocation!,
-                          radius:
-                              double.tryParse(_radiusController.text) ?? 150,
-                          useRadiusInMeter: true,
-                          color: Colors.blue.withOpacity(0.2),
-                          borderColor: Colors.blue.shade600,
-                          borderStrokeWidth: 2,
-                        ),
-                      ],
+                  FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: LatLng(29.866, 77.899),
+                      initialZoom: 13,
+                      onMapReady: () {
+                        _isMapReady = true;
+                        if (_selectedLocation != null) {
+                          _mapController.move(_selectedLocation!, 15.0);
+                        }
+                      },
+                      onTap: (tapPosition, point) {
+                        setState(() {
+                          _selectedLocation = point;
+                        });
+                      },
                     ),
-                  MarkerLayer(
-                    markers: [
-                      if (_myInitialLocation != null)
-                        Marker(
-                          point: _myInitialLocation!,
-                          height: 25,
-                          width: 25,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.blue[600],
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.proximity',
+                      ),
+                      if (_selectedLocation != null)
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: _selectedLocation!,
+                              radius:
+                                  double.tryParse(_radiusController.text) ??
+                                  150,
+                              useRadiusInMeter: true,
+                              color: Colors.blue.withOpacity(0.2),
+                              borderColor: Colors.blue.shade600,
+                              borderStrokeWidth: 2,
+                            ),
+                          ],
+                        ),
+                      MarkerLayer(
+                        markers: [
+                          if (_myInitialLocation != null)
+                            Marker(
+                              point: _myInitialLocation!,
+                              height: 25,
+                              width: 25,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[600],
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.blue.withOpacity(0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
+                            ),
+                          if (_selectedLocation != null)
+                            Marker(
+                              point: _selectedLocation!,
+                              width: 40,
+                              height: 40,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  Positioned(
+                    bottom: 20,
+                    left: 10,
+                    right: 64,
+                    child: ValueListenableBuilder(
+                      valueListenable: DatabaseService.getLocationBox()
+                          .listenable(),
+                      builder: (context, Box<SavedLocation> box, _) {
+                        final locations = box.values.toList();
+                        if (locations.isEmpty) return SizedBox.shrink();
+
+                        double estimatedHeight = locations.length * 50.0;
+                        if(estimatedHeight>200) estimatedHeight=200;
+                        double finalOffset = -(estimatedHeight+20);
+
+                        return Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: PopupMenuButton<SavedLocation>(
+                            color: Colors.white,
+                            constraints: BoxConstraints(
+                              maxHeight: 210,
+                              minWidth: 160,
+                            ),
+                            offset: Offset(0, finalOffset),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            onSelected: (SavedLocation loc) {
+                              setState(() {
+                                _selectedLocation = LatLng(
+                                  loc.latitude,
+                                  loc.longitude,
+                                );
+                              });
+                              _mapController.move(_selectedLocation!, 15.0);
+                            },
+                            itemBuilder: (context) {
+                              return locations.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                SavedLocation loc=entry.value;
+                                return PopupMenuItem(
+                                  value: loc,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        color: Colors.orange,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          loc.name,
+                                          style: GoogleFonts.poppins(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) {
+                                              return AlertDialog(
+                                                backgroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadiusGeometry.circular(
+                                                        16,
+                                                      ),
+                                                ),
+                                                title: Text(
+                                                  "Delete Saved Location?",
+                                                  style: GoogleFonts.poppins(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                content: Text(
+                                                  "Are you sure you want to delete ${loc.name}?",
+                                                  style: GoogleFonts.poppins(),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    child: Text(
+                                                      "Cancel",
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                    onPressed: () {
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pop();
+                                                    },
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () async {
+                                                      Navigator.pop(context);
+                                                      await box.deleteAt(index);
+                                                      Navigator.pop(context);
+                                                    },
+                                                    child: Text(
+                                                      "Delete",
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            color:
+                                                                Colors.red[400],
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
+                                        },
+                                        child: Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.red[300],
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      "Saved Locations",
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.grey[800],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_up,
+                                    color: Colors.blue[600],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      if (_selectedLocation != null)
-                        Marker(
-                          point: _selectedLocation!,
-                          width: 40,
-                          height: 40,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 40,
-                          ),
-                        ),
-                    ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  Positioned(
+                    bottom: 20,
+                    right: 10,
+                    child: FloatingActionButton(
+                      heroTag: "save_btn",
+                      backgroundColor: Colors.white,
+                      mini: true,
+                      onPressed: _saveCurrentLocation,
+                      child: Icon(
+                        Icons.bookmark_add,
+                        color: Colors.blue[600],
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -460,13 +725,20 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
 
               if (existing.hour == _selectedTime.hour &&
                   existing.minute == _selectedTime.minute) {
-                if (values[0] && (existing.activeDays&1==1)) clashingDays.add("Sunday");
-                if (values[1] && (existing.activeDays&2==1)) clashingDays.add("Monday");
-                if (values[2] && (existing.activeDays&4==1)) clashingDays.add("Tuesday");
-                if (values[3] && (existing.activeDays&8==1)) clashingDays.add("Wednesday");
-                if (values[4] && (existing.activeDays&16==1)) clashingDays.add("Thursday");
-                if (values[5] && (existing.activeDays&32==1)) clashingDays.add("Friday");
-                if (values[6] && (existing.activeDays&64==1)) clashingDays.add("Saturday");
+                if (values[0] && (existing.activeDays & 1 == 1))
+                  clashingDays.add("Sunday");
+                if (values[1] && (existing.activeDays & 2 == 1))
+                  clashingDays.add("Monday");
+                if (values[2] && (existing.activeDays & 4 == 1))
+                  clashingDays.add("Tuesday");
+                if (values[3] && (existing.activeDays & 8 == 1))
+                  clashingDays.add("Wednesday");
+                if (values[4] && (existing.activeDays & 16 == 1))
+                  clashingDays.add("Thursday");
+                if (values[5] && (existing.activeDays & 32 == 1))
+                  clashingDays.add("Friday");
+                if (values[6] && (existing.activeDays & 64 == 1))
+                  clashingDays.add("Saturday");
               }
             }
 
