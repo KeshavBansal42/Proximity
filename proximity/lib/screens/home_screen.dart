@@ -178,11 +178,6 @@ class _HomeState extends State<Home> {
                                                   await box.flush();
 
                                                   if (value == false) {
-                                                    // keys[index] is the Hive key.
-                                                    // Remember we used (key + 1) for the Alarm ID in background_services.dart
-                                                    // keys[index] might be string or int depending on Hive box type,
-                                                    // but your previous code treated it as int for Alarm ID.
-                                                    // Assuming key is int:
                                                     if (itemKey is int) {
                                                       await Alarm.stop(
                                                         itemKey + 1,
@@ -244,32 +239,32 @@ class _HomeState extends State<Home> {
                                           children: [
                                             _buildDayDot(
                                               'M',
-                                              (reminder.activeDays & 2) != 0,
+                                              (reminder.activeDays>>1 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'T',
-                                              (reminder.activeDays & 4) != 0,
+                                              (reminder.activeDays>>2 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'W',
-                                              (reminder.activeDays & 8) != 0,
+                                              (reminder.activeDays>>3 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'T',
-                                              (reminder.activeDays & 16) != 0,
+                                              (reminder.activeDays>>4 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'F',
-                                              (reminder.activeDays & 32) != 0,
+                                              (reminder.activeDays>>5 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(
                                               'S',
-                                              (reminder.activeDays & 64) != 0,
+                                              (reminder.activeDays>>6 & 1) != 0,
                                               isActive,
                                             ),
                                             _buildDayDot(

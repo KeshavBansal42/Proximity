@@ -125,9 +125,31 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
   Future<void> _pickAudio() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.audio,
+
+      // allowedExtensions: ['mp3'],
     );
 
     if (result != null) {
+      String path = result.files.single.path!;
+      String extension = path.split('.').last.toLowerCase();
+
+      if (extension != "mp3") {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Invalid file format, please select a .mp3 file.",
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+              backgroundColor: Colors.red[400],
+            ),
+          );
+        }
+        await Future.delayed(Duration(seconds: 3));
+        _pickAudio();
+        return;
+      }
+
       setState(() {
         _selectedAudioPath = result.files.single.path;
       });
@@ -322,8 +344,8 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                         if (locations.isEmpty) return SizedBox.shrink();
 
                         double estimatedHeight = locations.length * 50.0;
-                        if(estimatedHeight>200) estimatedHeight=200;
-                        double finalOffset = -(estimatedHeight+20);
+                        if (estimatedHeight > 200) estimatedHeight = 200;
+                        double finalOffset = -(estimatedHeight + 20);
 
                         return Container(
                           height: 45,
@@ -360,7 +382,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                             itemBuilder: (context) {
                               return locations.asMap().entries.map((entry) {
                                 int index = entry.key;
-                                SavedLocation loc=entry.value;
+                                SavedLocation loc = entry.value;
                                 return PopupMenuItem(
                                   value: loc,
                                   child: Row(
@@ -660,7 +682,7 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
                       ListTile(
                         title: Text(
                           _selectedAudioPath == null
-                              ? "Select Alarm Sound"
+                              ? "Select Alarm Sound(.mp3 only)"
                               : "Sound Selected",
                         ),
                         subtitle: Text(
