@@ -13,8 +13,6 @@ Proximity is a smart task manager that triggers reminders not just by time, but 
 * **🎵 Custom Alarms:** Supports custom audio files for notifications.
 
 ## 📸 Screenshots
-| Home Screen | Add Reminder |
-|:---:|:---:|:---:|
 | <img src="proximity/assets/home.jpeg" width="200"> | <img src="proximity/assets/add.jpeg" width="200"> |
 
 ## 🛠️ Tech Stack
