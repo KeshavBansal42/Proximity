@@ -36,7 +36,7 @@ You don't need to build the code yourself!
 ### Option 2: Build from Source (For Developers)
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/sdswoc/proximity](https://github.com/sdswoc/proximity)
+    git clone [https://github.com/KeshavBansal42/Proximity](https://github.com/KeshavBansal42/Proximity)
     ```
 2.  **Navigate to the project**
     ```bash
